@@ -2,11 +2,11 @@
 #include "ConstValues.h"
 
 NAME_SPACE_DRAGON_BONES_BEGIN
-bool XMLDataParser::getBoolean(const XMLElement &data, const char *key, bool defaultValue)
+bool XMLDataParser::getBoolean(const XMLElement *data, const char *key, bool defaultValue)
 {
-    if (data.FindAttribute(key))
+	if (data != nullptr && data->FindAttribute(key))
     {
-        const char *value = data.Attribute(key);
+        const char *value = data->Attribute(key);
         
         if (
             strcmp(value, "0") == 0 ||
@@ -21,18 +21,18 @@ bool XMLDataParser::getBoolean(const XMLElement &data, const char *key, bool def
         }
         else
         {
-            return data.BoolAttribute(key);
+            return data->BoolAttribute(key);
         }
     }
     
     return defaultValue;
 }
 
-float XMLDataParser::getNumber(const XMLElement &data, const char *key, float defaultValue, float nanValue)
+float XMLDataParser::getNumber(const XMLElement *data, const char *key, float defaultValue, float nanValue)
 {
-    if (data.FindAttribute(key))
+	if (data != nullptr && data->FindAttribute(key))
     {
-        const char *value = data.Attribute(key);
+        const char *value = data->Attribute(key);
         
         if (
             strcmp(value, "NaN") == 0 ||
@@ -46,7 +46,7 @@ float XMLDataParser::getNumber(const XMLElement &data, const char *key, float de
         }
         else
         {
-            return data.FloatAttribute(key);
+            return data->FloatAttribute(key);
         }
     }
     
@@ -119,23 +119,25 @@ DragonBonesData* XMLDataParser::parseDragonBonesData(const void *rawDragonBonesD
     DragonBonesData *dragonBonesData = new DragonBonesData();
     dragonBonesData->name = dragonBonesXML->Attribute(ConstValues::A_NAME.c_str());
     
+	bool isGlobalData = dragonBonesXML->Attribute(ConstValues::A_IS_GLOBAL.c_str()) == "0" ? false : true;
+			  
     for (const XMLElement *armatureXML = dragonBonesXML->FirstChildElement(ConstValues::ARMATURE.c_str()); armatureXML; armatureXML = armatureXML->NextSiblingElement(ConstValues::ARMATURE.c_str()))
     {
-        ArmatureData *armatureData = parseArmatureData(armatureXML);
+		ArmatureData *armatureData = parseArmatureData(armatureXML, isGlobalData);
         dragonBonesData->armatureDataList.push_back(armatureData);
     }
     
     return dragonBonesData;
 }
 
-ArmatureData* XMLDataParser::parseArmatureData(const XMLElement *armatureXML) const
+ArmatureData* XMLDataParser::parseArmatureData(const XMLElement *armatureXML, bool isGlobalData) const
 {
     ArmatureData *armatureData = new ArmatureData();
     armatureData->name = armatureXML->Attribute(ConstValues::A_NAME.c_str());
     
     for (const XMLElement *boneXML = armatureXML->FirstChildElement(ConstValues::BONE.c_str()); boneXML; boneXML = boneXML->NextSiblingElement(ConstValues::BONE.c_str()))
     {
-        BoneData *boneData = parseBoneData(boneXML);
+		BoneData *boneData = parseBoneData(boneXML, isGlobalData);
         armatureData->boneDataList.push_back(boneData);
     }
     
@@ -150,7 +152,7 @@ ArmatureData* XMLDataParser::parseArmatureData(const XMLElement *armatureXML) co
     
     for (const XMLElement *animationXML = armatureXML->FirstChildElement(ConstValues::ANIMATION.c_str()); animationXML; animationXML = animationXML->NextSiblingElement(ConstValues::ANIMATION.c_str()))
     {
-        AnimationData *animationData = parseAnimationData(animationXML, armatureData);
+		AnimationData *animationData = parseAnimationData(animationXML, armatureData, isGlobalData);
         armatureData->animationDataList.push_back(animationData);
     }
     
@@ -169,7 +171,7 @@ ArmatureData* XMLDataParser::parseArmatureData(const XMLElement *armatureXML) co
     return armatureData;
 }
 
-BoneData* XMLDataParser::parseBoneData(const XMLElement *boneXML) const
+BoneData* XMLDataParser::parseBoneData(const XMLElement *boneXML, bool isGlobalData) const
 {
     BoneData *boneData = new BoneData();
     boneData->name = boneXML->Attribute(ConstValues::A_NAME.c_str());
@@ -181,16 +183,18 @@ BoneData* XMLDataParser::parseBoneData(const XMLElement *boneXML) const
     }
     
     boneData->length = boneXML->FloatAttribute(ConstValues::A_LENGTH.c_str());
-    boneData->inheritRotation = getBoolean(*boneXML, ConstValues::A_INHERIT_ROTATION.c_str(), true);
-    boneData->inheritScale = getBoolean(*boneXML, ConstValues::A_INHERIT_SCALE.c_str(), false);
+    //boneData->inheritRotation = getBoolean(*boneXML, ConstValues::A_INHERIT_ROTATION.c_str(), true);
+    //boneData->inheritScale = getBoolean(*boneXML, ConstValues::A_INHERIT_SCALE.c_str(), false);
 
     const XMLElement *transformXML = boneXML->FirstChildElement(ConstValues::TRANSFORM.c_str());
     if (transformXML)
     {
-        parseTransform(*transformXML, boneData->global);
+		parseTransform(*transformXML, boneData->transform);
     }
-
-    boneData->transform = boneData->global;
+	if (isGlobalData) 
+	{
+		boneData->global = boneData->transform;
+	}
     
     for (const XMLElement *rectangleXML = boneXML->FirstChildElement(ConstValues::RECTANGLE.c_str()); rectangleXML; rectangleXML = rectangleXML->NextSiblingElement(ConstValues::RECTANGLE.c_str()))
     {
@@ -279,19 +283,19 @@ DisplayData* XMLDataParser::parseDisplayData(const XMLElement *displayXML) const
     return displayData;
 }
 
-AnimationData* XMLDataParser::parseAnimationData(const XMLElement *animationXML, const ArmatureData *armatureData) const
+AnimationData* XMLDataParser::parseAnimationData(const XMLElement *animationXML, const ArmatureData *armatureData, bool isGlobalData) const
 {
     AnimationData *animationData = new AnimationData();
     animationData->name = animationXML->Attribute(ConstValues::A_NAME.c_str());
     animationData->frameRate = _frameRate;
     animationData->duration = (int)(round(animationXML->IntAttribute(ConstValues::A_DURATION.c_str()) * 1000.f / _frameRate));
-    animationData->playTimes = animationXML->IntAttribute(ConstValues::A_LOOP.c_str());
+    animationData->playTimes = animationXML->IntAttribute(ConstValues::A_LOOP.c_str(), 1);
     animationData->fadeTime = animationXML->FloatAttribute(ConstValues::A_FADE_IN_TIME.c_str());
-    animationData->scale = getNumber(*animationXML, ConstValues::A_SCALE.c_str(), 1.f, 1.f);
+    animationData->scale = getNumber(animationXML, ConstValues::A_SCALE.c_str(), 1.f, 1.f);
     // use frame tweenEase, NaN
     // overwrite frame tweenEase, [-1, 0):ease in, 0:line easing, (0, 1]:ease out, (1, 2]:ease in out
-    animationData->tweenEasing = getNumber(*animationXML, ConstValues::A_TWEEN_EASING.c_str(), USE_FRAME_TWEEN_EASING, USE_FRAME_TWEEN_EASING);
-    animationData->autoTween = getBoolean(*animationXML, ConstValues::A_AUTO_TWEEN.c_str(), true);
+    animationData->tweenEasing = getNumber(animationXML, ConstValues::A_TWEEN_EASING.c_str(), USE_FRAME_TWEEN_EASING, USE_FRAME_TWEEN_EASING);
+    animationData->autoTween = getBoolean(animationXML, ConstValues::A_AUTO_TWEEN.c_str(), true);
     
     for (const XMLElement *frameXML = animationXML->FirstChildElement(ConstValues::FRAME.c_str()); frameXML; frameXML = frameXML->NextSiblingElement(ConstValues::FRAME.c_str()))
     {
@@ -303,27 +307,29 @@ AnimationData* XMLDataParser::parseAnimationData(const XMLElement *animationXML,
     
     for (const XMLElement *timelineXML = animationXML->FirstChildElement(ConstValues::TIMELINE.c_str()); timelineXML; timelineXML = timelineXML->NextSiblingElement(ConstValues::TIMELINE.c_str()))
     {
-        TransformTimeline *timeline = parseTransformTimeline(timelineXML, animationData->duration);
+		TransformTimeline *timeline = parseTransformTimeline(timelineXML, animationData->duration, isGlobalData);
         animationData->timelineList.push_back(timeline);
     }
     
     addHideTimeline(animationData, armatureData);
-    transformAnimationData(animationData, armatureData);
+	transformAnimationData(animationData, armatureData, isGlobalData);
     return animationData;
 }
 
 
-TransformTimeline* XMLDataParser::parseTransformTimeline(const XMLElement *timelineXML, int duration) const
+TransformTimeline* XMLDataParser::parseTransformTimeline(const XMLElement *timelineXML, int duration, bool isGlobalData) const
 {
     TransformTimeline *timeline = new TransformTimeline();
     timeline->name = timelineXML->Attribute(ConstValues::A_NAME.c_str());
     timeline->scale = timelineXML->FloatAttribute(ConstValues::A_SCALE.c_str());
     timeline->offset = timelineXML->FloatAttribute(ConstValues::A_OFFSET.c_str());
+    timeline->originPivot.x = timelineXML->FloatAttribute(ConstValues::A_PIVOT_X.c_str());
+	timeline->originPivot.y = timelineXML->FloatAttribute(ConstValues::A_PIVOT_Y.c_str());
     timeline->duration = duration;
     
     for (const XMLElement *frameXML = timelineXML->FirstChildElement(ConstValues::FRAME.c_str()); frameXML; frameXML = frameXML->NextSiblingElement(ConstValues::FRAME.c_str()))
     {
-        TransformFrame *frame = parseTransformFrame(frameXML);
+		TransformFrame *frame = parseTransformFrame(frameXML, isGlobalData);
         timeline->frameList.push_back(frame);
     }
     
@@ -338,30 +344,30 @@ Frame* XMLDataParser::parseMainFrame(const XMLElement *frameXML) const
     return frame;
 }
 
-TransformFrame* XMLDataParser::parseTransformFrame(const XMLElement *frameXML) const
+TransformFrame* XMLDataParser::parseTransformFrame(const XMLElement *frameXML, bool isGlobalData) const
 {
     TransformFrame *frame = new TransformFrame();
     parseFrame(*frameXML, *frame);
 
-    frame->visible = !getBoolean(*frameXML, ConstValues::A_HIDE.c_str(), false);
+    frame->visible = !getBoolean(frameXML, ConstValues::A_HIDE.c_str(), false);
     // NaN:no tween, 10:auto tween, [-1, 0):ease in, 0:line easing, (0, 1]:ease out, (1, 2]:ease in out
-    frame->tweenEasing = getNumber(*frameXML, ConstValues::A_TWEEN_EASING.c_str(), AUTO_TWEEN_EASING, NO_TWEEN_EASING);
+    frame->tweenEasing = getNumber(frameXML, ConstValues::A_TWEEN_EASING.c_str(), AUTO_TWEEN_EASING, NO_TWEEN_EASING);
     frame->tweenRotate = frameXML->IntAttribute(ConstValues::A_TWEEN_ROTATE.c_str());
-    frame->tweenScale = getBoolean(*frameXML, ConstValues::A_TWEEN_SCALE.c_str(), true);
+    frame->tweenScale = getBoolean(frameXML, ConstValues::A_TWEEN_SCALE.c_str(), true);
     frame->displayIndex = frameXML->IntAttribute(ConstValues::A_DISPLAY_INDEX.c_str());
-    frame->zOrder = getNumber(*frameXML, ConstValues::A_Z_ORDER.c_str(), 0.f, 0.f);
+    frame->zOrder = getNumber(frameXML, ConstValues::A_Z_ORDER.c_str(), 0.f, 0.f);
 
     const XMLElement *transformXML = frameXML->FirstChildElement(ConstValues::TRANSFORM.c_str());
     if (transformXML)
     {
-        parseTransform(*transformXML, frame->global);
+		parseTransform(*transformXML, frame->transform);
         parsePivot(*transformXML, frame->pivot);
     }
 
     // copy
-    frame->transform = frame->global;
-    frame->scaleOffset.x = getNumber(*frameXML, ConstValues::A_SCALE_X_OFFSET.c_str(), 0.f, 0.f);
-    frame->scaleOffset.y = getNumber(*frameXML, ConstValues::A_SCALE_Y_OFFSET.c_str(), 0.f, 0.f);
+	frame->global = frame->transform;
+    frame->scaleOffset.x = getNumber(frameXML, ConstValues::A_SCALE_X_OFFSET.c_str(), 0.f, 0.f);
+    frame->scaleOffset.y = getNumber(frameXML, ConstValues::A_SCALE_Y_OFFSET.c_str(), 0.f, 0.f);
 
     const XMLElement *colorTransformXML = frameXML->FirstChildElement(ConstValues::COLOR_TRANSFORM.c_str());
     if (colorTransformXML)
@@ -475,8 +481,8 @@ void XMLDataParser::parseColorTransform(const XMLElement &colorTransformXML, Col
 
 void XMLDataParser::parseTextData(const XMLElement &textXML, TextData &textData) const
 {
-    textData.bold = getBoolean(textXML, ConstValues::A_BOLD.c_str(), false);
-    textData.italic = getBoolean(textXML, ConstValues::A_ITALIC.c_str(), false);
+    textData.bold = getBoolean(&textXML, ConstValues::A_BOLD.c_str(), false);
+    textData.italic = getBoolean(&textXML, ConstValues::A_ITALIC.c_str(), false);
 
     textData.size = textXML.UnsignedAttribute(ConstValues::A_SIZE.c_str());
 

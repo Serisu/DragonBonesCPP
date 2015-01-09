@@ -86,7 +86,8 @@ public:
 protected:
     static void transformArmatureData(ArmatureData *armatureData);
     static void transformArmatureDataAnimations(ArmatureData *armatureData);
-    static void transformAnimationData(AnimationData *animationData, const ArmatureData *armatureData);
+    static void transformRelativeAnimationData(AnimationData *animationData, const ArmatureData *armatureData);
+    static void transformAnimationData(AnimationData *animationData, const ArmatureData *armatureData, bool isGlobalData);
     static void addHideTimeline(AnimationData *animationData, const ArmatureData *armatureData);
     
 private:

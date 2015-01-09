@@ -45,7 +45,8 @@ public:
     virtual Armature* buildArmature(const std::string &armatureName) const;
     virtual Armature* buildArmature(const std::string &armatureName, const std::string &dragonBonesName) const;
     virtual Armature* buildArmature(const std::string &armatureName, const std::string &skinName, const std::string &animationName, const std::string &dragonBonesName, const std::string &textureAtlasName) const;
-    virtual void* getTextureDisplay(const std::string &textureName, const std::string &textureAtlasName = "", const DisplayData *displayData = nullptr) const;
+    
+	virtual void* getTextureDisplay(const std::string &textureName, const std::string &textureAtlasName = "", const DisplayData *displayData = nullptr) const;
     
 protected:
 

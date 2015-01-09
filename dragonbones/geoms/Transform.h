@@ -3,8 +3,8 @@
 
 #include "../DragonBones.h"
 #include "Matrix.h"
-
 NAME_SPACE_DRAGON_BONES_BEGIN
+class Matrix;
 class Transform
 {
 public:
@@ -15,6 +15,9 @@ public:
     float scaleX;
     float scaleY;
     
+	static Matrix *_helpTransformMatrix;
+	static Matrix *_helpParentTransformMatrix;
+
 public:
     float getRotation()
     {
@@ -34,6 +37,7 @@ public:
         skewY = 0.f;
         scaleX = 1.f;
         scaleY = 1.f;
+
     }
     Transform(const Transform &copyData)
     {
@@ -51,28 +55,9 @@ public:
     }
     virtual ~Transform() {}
     
-    void toMatrix(Matrix &matrix, bool keepScale = false) const
-    {
-        if (keepScale)
-        {
-            matrix.a = scaleX * cos(skewY);
-            matrix.b = scaleX * sin(skewY);
-            matrix.c = -scaleY * sin(skewX);
-            matrix.d = scaleY * cos(skewX);
-        }
-        else
-        {
-            matrix.a = cos(skewY);
-            matrix.b = sin(skewY);
-            matrix.c = -sin(skewX);
-            matrix.d = cos(skewX);
-        }
-        
-        matrix.tx = x;
-        matrix.ty = y;
-    }
+    void toMatrix(Matrix &matrix, bool keepScale = false) const;
     
-    void transformWith(const Transform &parent)
+    /*void transformWith(const Transform &parent)
     {
         Matrix matrix;
         parent.toMatrix(matrix, true);
@@ -83,7 +68,13 @@ public:
         y = matrix.d * y0 + matrix.b * x0 + matrix.ty;
         skewX = formatRadian(skewX - parent.skewX);
         skewY = formatRadian(skewY - parent.skewY);
-    }
+    }*/
+	
+    void transformWith(const Transform &parent);
+
+	void globalToLocal(const Transform &parent);
+	
+	void matrixToTransform(Matrix &matrix, Transform &transform, bool scaleXF, bool scaleYF);
 };
 NAME_SPACE_DRAGON_BONES_END
 #endif  // GEOMS_TRANSFORM_H

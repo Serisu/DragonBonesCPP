@@ -61,16 +61,16 @@ void TimelineState::fadeIn(Bone *bone, AnimationState *animationState, Transform
     name = _timeline->name;
     _transform.x = 0.f;
     _transform.y = 0.f;
-    _transform.scaleX = 0.f;
-    _transform.scaleY = 0.f;
+    _transform.scaleX = 1.f;
+    _transform.scaleY = 1.f;
     _transform.skewX = 0.f;
     _transform.skewY = 0.f;
     _pivot.x = 0.f;
     _pivot.y = 0.f;
     _durationTransform.x = 0.f;
     _durationTransform.y = 0.f;
-    _durationTransform.scaleX = 0.f;
-    _durationTransform.scaleY = 0.f;
+    _durationTransform.scaleX = 1.f;
+    _durationTransform.scaleY = 1.f;
     _durationTransform.skewX = 0.f;
     _durationTransform.skewY = 0.f;
     _durationPivot.x = 0.f;
@@ -450,8 +450,8 @@ void TimelineState::updateToNextFrame(int currentPlayTimes)
             _transform.y = _originTransform.y + currentFrame->transform.y;
             _transform.skewX = _originTransform.skewX + currentFrame->transform.skewX;
             _transform.skewY = _originTransform.skewY + currentFrame->transform.skewY;
-            _transform.scaleX = _originTransform.scaleX + currentFrame->transform.scaleX;
-            _transform.scaleY = _originTransform.scaleY + currentFrame->transform.scaleY;
+            _transform.scaleX = _originTransform.scaleX * currentFrame->transform.scaleX;
+            _transform.scaleY = _originTransform.scaleY * currentFrame->transform.scaleY;
             _pivot.x = _originPivot.x + currentFrame->pivot.x;
             _pivot.y = _originPivot.y + currentFrame->pivot.y;
         }
@@ -467,8 +467,8 @@ void TimelineState::updateToNextFrame(int currentPlayTimes)
         }
         else
         {
-            _transform.scaleX = _originTransform.scaleX + currentFrame->transform.scaleX;
-            _transform.scaleY = _originTransform.scaleY + currentFrame->transform.scaleY;
+            _transform.scaleX = _originTransform.scaleX * currentFrame->transform.scaleX;
+            _transform.scaleY = _originTransform.scaleY * currentFrame->transform.scaleY;
         }
     }
     
@@ -538,8 +538,8 @@ void TimelineState::updateTween()
             
             if (_tweenScale)
             {
-                _transform.scaleX = _originTransform.scaleX + currentTransform.scaleX + _durationTransform.scaleX * progress;
-                _transform.scaleY = _originTransform.scaleY + currentTransform.scaleY + _durationTransform.scaleY * progress;
+                _transform.scaleX = _originTransform.scaleX * currentTransform.scaleX + _durationTransform.scaleX * progress;
+                _transform.scaleY = _originTransform.scaleY * currentTransform.scaleY + _durationTransform.scaleY * progress;
             }
             
             _pivot.x = _originPivot.x + currentPivot.x + _durationPivot.x * progress;
@@ -595,28 +595,41 @@ void TimelineState::updateSingleFrame()
     
     if (_blendEnabled)
     {
-        if (_animationState->additiveBlending)
-        {
-            // additive blending
-            // singleFrame.transform (0)
-            _transform.x =
-                _transform.y =
-                    _transform.skewX =
-                        _transform.skewY =
-                            _transform.scaleX =
-                                _transform.scaleY = 0.f;
-            _pivot.x =
-                _pivot.y = 0.f;
-        }
-        else
-        {
-            // normal blending
-            // timeline.originTransform + singleFrame.transform (0)
-            // copy
-            _transform = _originTransform;
-            // copy
-            _pivot = _originPivot;
-        }
+        /**
+				 * <使用绝对数据>
+				 * 单帧的timeline，第一个关键帧的transform为0
+				 * timeline.originTransform = firstFrame.transform;
+				 * eachFrame.transform = eachFrame.transform - timeline.originTransform;
+				 * firstFrame.transform == 0;
+				 * 
+				 * <使用相对数据>
+				 * 使用相对数据时，timeline.originTransform = 0，第一个关键帧的transform有可能不为 0
+				 */
+				
+				if(_animationState.additiveBlending)
+				{
+					_transform.x = currentFrame->transform.x;
+					_transform.y = currentFrame->transform.y;
+					_transform.skewX = currentFrame->transform.skewX;
+					_transform.skewY = currentFrame->transform.skewY;
+					_transform.scaleX = currentFrame->transform.scaleX;
+					_transform.scaleY = currentFrame->transform.scaleY;
+					
+					_pivot.x = currentFrame->pivot.x;
+					_pivot.y = currentFrame->pivot.y;
+				}
+				else
+				{
+					_transform.x = _originTransform.x + currentFrame->transform.x;
+					_transform.y = _originTransform.y + currentFrame->transform.y;
+					_transform.skewX = _originTransform.skewX + currentFrame->transform.skewX;
+					_transform.skewY = _originTransform.skewY + currentFrame->transform.skewY;
+					_transform.scaleX = _originTransform.scaleX * currentFrame->transform.scaleX;
+					_transform.scaleY = _originTransform.scaleY * currentFrame->transform.scaleY;
+					
+					_pivot.x = _originPivot.x + currentFrame->pivot.x;
+					_pivot.y = _originPivot.y + currentFrame->pivot.y;
+				}
         
         _bone->invalidUpdate();
         

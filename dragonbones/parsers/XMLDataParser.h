@@ -10,8 +10,8 @@ NAME_SPACE_DRAGON_BONES_BEGIN
 class XMLDataParser : public BaseDataParser
 {
 private:
-    static bool getBoolean(const XMLElement &data, const char *key, bool defaultValue);
-    static float getNumber(const XMLElement &data, const char *key, float defaultValue, float nanValue);
+    static bool getBoolean(const XMLElement *data, const char *key, bool defaultValue);
+    static float getNumber(const XMLElement *data, const char *key, float defaultValue, float nanValue);
     
 private:
     mutable float _textureScale;
@@ -29,15 +29,15 @@ public:
 private:
     TextureData* parseTextureData(const XMLElement *textureXML) const;
     
-    ArmatureData* parseArmatureData(const XMLElement *armatureXML) const;
-    BoneData* parseBoneData(const XMLElement *boneXML) const;
+    ArmatureData* parseArmatureData(const XMLElement *armatureXML, bool isGlobalData) const;
+    BoneData* parseBoneData(const XMLElement *boneXML, bool isGlobalData) const;
     SkinData* parseSkinData(const XMLElement *skinXML) const;
     SlotData* parseSlotData(const XMLElement *slotXML) const;
     DisplayData* parseDisplayData(const XMLElement *displayXML) const;
-    AnimationData* parseAnimationData(const XMLElement *animationXML, const ArmatureData *armatureData) const;
-    TransformTimeline* parseTransformTimeline(const XMLElement *timelineXML, int duration) const;
+    AnimationData* parseAnimationData(const XMLElement *animationXML, const ArmatureData *armatureData, bool isGlobalData) const;
+    TransformTimeline* parseTransformTimeline(const XMLElement *timelineXML, int duration, bool isGlobalData) const;
     Frame* parseMainFrame(const XMLElement *frameXML) const;
-    TransformFrame* parseTransformFrame(const XMLElement *frameXML) const;
+    TransformFrame* parseTransformFrame(const XMLElement *frameXML, bool isGlobalData) const;
     RectangleData* parseRectangleData(const XMLElement *rectangleXML) const;
     EllipseData* parseEllipseData(const XMLElement *ellipseXML) const;
     

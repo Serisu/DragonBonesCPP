@@ -145,46 +145,12 @@ void Slot::dispose()
 
 void Slot::update()
 {
-    if (_parent->_needUpdate <= 0)
-    {
-        return;
-    }
-    
-    const float x = origin.x + offset.x + _parent->_tweenPivot.x;
-    const float y = origin.y + offset.y + _parent->_tweenPivot.y;
-    const Matrix &parentMatrix = _parent->globalTransformMatrix;
-    globalTransformMatrix.tx = global.x = parentMatrix.a * x + parentMatrix.c * y + parentMatrix.tx;
-    globalTransformMatrix.ty = global.y = parentMatrix.d * y + parentMatrix.b * x + parentMatrix.ty;
-    //globalTransformMatrix.tx = global.x = parentMatrix.a * x * _parent->global.scaleX + parentMatrix.c * y * _parent->global.scaleY + parentMatrix.tx;
-    //globalTransformMatrix.ty = global.y = parentMatrix.d * y * _parent->global.scaleY + parentMatrix.b * x * _parent->global.scaleX + parentMatrix.ty;
-    
-    if (inheritRotation)
-    {
-        global.skewX = origin.skewX + offset.skewX + _parent->global.skewX;
-        global.skewY = origin.skewY + offset.skewY + _parent->global.skewY;
-    }
-    else
-    {
-        global.skewX = origin.skewX + offset.skewX;
-        global.skewY = origin.skewY + offset.skewY;
-    }
-    
-    if (inheritScale)
-    {
-        global.scaleX = origin.scaleX * offset.scaleX * _parent->global.scaleX;
-        global.scaleY = origin.scaleY * offset.scaleY * _parent->global.scaleY;
-    }
-    else
-    {
-        global.scaleX = origin.scaleX * offset.scaleX;
-        global.scaleY = origin.scaleY * offset.scaleY;
-    }
-    
-    globalTransformMatrix.a = global.scaleX * cos(global.skewY);
-    globalTransformMatrix.b = global.scaleX * sin(global.skewY);
-    globalTransformMatrix.c = -global.scaleY * sin(global.skewX);
-    globalTransformMatrix.d = global.scaleY * cos(global.skewX);
-    updateDisplayTransform();
+	Transform transform;
+	Matrix matrix;
+	updateGlobal(transform, matrix);
+			
+	updateDisplayTransform();
+
 }
 
 void Slot::changeDisplay(int displayIndex)
@@ -233,6 +199,17 @@ void Slot::changeDisplay(int displayIndex)
             updateChildArmatureAnimation();
         }
     }
+}
+
+void Slot::calculateRelativeParentTransform()
+{
+    global.scaleX = origin.scaleX * offset.scaleX;
+	global.scaleY = origin.scaleY * offset.scaleY;
+	global.skewX = origin.skewX + offset.skewX;
+	global.skewY = origin.skewY + offset.skewY;
+	global.x = origin.x + offset.x + _parent->_tweenPivot.x;
+	global.y = origin.y + offset.y + _parent->_tweenPivot.y;
+		
 }
 
 void Slot::updateChildArmatureAnimation()

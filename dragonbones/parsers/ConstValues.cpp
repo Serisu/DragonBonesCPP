@@ -32,6 +32,7 @@ const std::string ConstValues::A_VERSION = "version";
 const std::string ConstValues::A_IMAGE_PATH = "imagePath";
 const std::string ConstValues::A_FRAME_RATE = "frameRate";
 const std::string ConstValues::A_NAME = "name";
+const std::string ConstValues::A_IS_GLOBAL = "isGlobal";
 const std::string ConstValues::A_PARENT = "parent";
 const std::string ConstValues::A_LENGTH = "length";
 const std::string ConstValues::A_TYPE = "type";

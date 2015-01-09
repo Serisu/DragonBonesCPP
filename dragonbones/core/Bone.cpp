@@ -53,9 +53,12 @@ Bone::Bone()
 {
     _isColorChanged = false;
     _needUpdate = 2;
-    _tween.scaleX = _tween.scaleY = 0.f;
-    inheritRotation = true;
-    inheritScale = false;
+    _tween.scaleX = _tween.scaleY = 1.f;
+	
+    
+	applyOffsetTranslationToChild = true;
+	applyOffsetRotationToChild = true;
+	applyOffsetScaleToChild = false;
 }
 Bone::~Bone()
 {
@@ -172,6 +175,16 @@ void Bone::removeChild(Object *object)
     }
 }
 
+void Bone::calculateRelativeParentTransform() 
+{
+	global.scaleX = origin.scaleX * _tween.scaleX * offset.scaleX;
+	global.scaleY = origin.scaleY * _tween.scaleY * offset.scaleY;
+	global.skewX = origin.skewX + _tween.skewX + offset.skewX;
+	global.skewY = origin.skewY + _tween.skewY + offset.skewY;
+	global.x = origin.x + _tween.x + offset.x;
+	global.y = origin.y + _tween.y + offset.y;
+}
+
 void Bone::update(bool needUpdate)
 {
     _needUpdate --;
@@ -186,53 +199,73 @@ void Bone::update(bool needUpdate)
     }
     
     blendingTimeline();
-    global.scaleX = (origin.scaleX + _tween.scaleX) * offset.scaleX;
-    global.scaleY = (origin.scaleY + _tween.scaleY) * offset.scaleY;
-    
-    if (_parent)
-    {
-        const float x = origin.x + offset.x + _tween.x;
-        const float y = origin.y + offset.y + _tween.y;
-        const Matrix &parentMatrix = _parent->globalTransformMatrix;
-        globalTransformMatrix.tx = global.x = parentMatrix.a * x + parentMatrix.c * y + parentMatrix.tx;
-        globalTransformMatrix.ty = global.y = parentMatrix.d * y + parentMatrix.b * x + parentMatrix.ty;
-        
-        if (inheritRotation)
-        {
-            global.skewX = origin.skewX + offset.skewX + _tween.skewX + _parent->global.skewX;
-            global.skewY = origin.skewY + offset.skewY + _tween.skewY + _parent->global.skewY;
-        }
-        else
-        {
-            global.skewX = origin.skewX + offset.skewX + _tween.skewX;
-            global.skewY = origin.skewY + offset.skewY + _tween.skewY;
-        }
-        
-        if (inheritScale)
-        {
-            global.scaleX *= _parent->global.scaleX;
-            global.scaleY *= _parent->global.scaleY;
-        }
-    }
-    else
-    {
-        globalTransformMatrix.tx = global.x = origin.x + offset.x + _tween.x;
-        globalTransformMatrix.ty = global.y = origin.y + offset.y + _tween.y;
-        global.skewX = origin.skewX + offset.skewX + _tween.skewX;
-        global.skewY = origin.skewY + offset.skewY + _tween.skewY;
-    }
-    
-    globalTransformMatrix.a = global.scaleX * cos(global.skewY);
-    globalTransformMatrix.b = global.scaleX * sin(global.skewY);
-    globalTransformMatrix.c = -global.scaleY * sin(global.skewX);
-    globalTransformMatrix.d = global.scaleY * cos(global.skewX);
-    
-    /*
-    globalTransformMatrix.a = offset.scaleX * cos(global.skewY);
-    globalTransformMatrix.b = offset.scaleX * sin(global.skewY);
-    globalTransformMatrix.c = -offset.scaleY * sin(global.skewX);
-    globalTransformMatrix.d = offset.scaleY * cos(global.skewX);
-    */
+
+
+	//计算global
+	Transform parentGlobalTransform;
+	Matrix parentGlobalTransformMatrix;
+	bool result = updateGlobal(parentGlobalTransform, parentGlobalTransformMatrix);
+			
+	//计算globalForChild
+	bool ifExistOffsetTranslation = offset.x != 0 || offset.y != 0;
+	bool ifExistOffsetScale = offset.scaleX != 0 || offset.scaleY != 0;
+	bool ifExistOffsetRotation = offset.skewX != 0 || offset.skewY != 0;
+			
+	if(	(!ifExistOffsetTranslation || applyOffsetTranslationToChild) &&
+		(!ifExistOffsetScale || applyOffsetScaleToChild) &&
+		(!ifExistOffsetRotation || applyOffsetRotationToChild))
+	{
+		_globalTransformForChild = &global;
+		_globalTransformMatrixForChild = &globalTransformMatrix;
+	}
+	else
+	{
+		if(!_tempGlobalTransformForChild)
+		{
+			_tempGlobalTransformForChild = new Transform();
+		}
+		_globalTransformForChild = _tempGlobalTransformForChild;
+				
+		if(!_tempGlobalTransformMatrixForChild)
+		{
+			_tempGlobalTransformMatrixForChild = new Matrix();
+		}
+		_globalTransformMatrixForChild = _tempGlobalTransformMatrixForChild;
+				
+		_globalTransformForChild->x = origin.x + _tween.x;
+		_globalTransformForChild->y = origin.y + _tween.y;
+		_globalTransformForChild->scaleX = origin.scaleX * _tween.scaleX;
+		_globalTransformForChild->scaleY = origin.scaleY * _tween.scaleY;
+		_globalTransformForChild->skewX = origin.skewX + _tween.skewX;
+		_globalTransformForChild->skewY = origin.skewY + _tween.skewY;
+				
+		if(applyOffsetTranslationToChild)
+		{
+			_globalTransformForChild->x += offset.x;
+			_globalTransformForChild->y += offset.y;
+		}
+		if(applyOffsetScaleToChild)
+		{
+			_globalTransformForChild->scaleX *= offset.scaleX;
+			_globalTransformForChild->scaleY *= offset.scaleY;
+		}
+		if(applyOffsetRotationToChild)
+		{
+			_globalTransformForChild->skewX += offset.skewX;
+			_globalTransformForChild->skewY += offset.skewY;
+		}
+				
+		_globalTransformForChild->toMatrix(*_globalTransformMatrixForChild, true);
+		if(result)
+		{
+			_globalTransformMatrixForChild->concat(parentGlobalTransformMatrix);
+			_globalTransformMatrixForChild->toTransform(*_globalTransformForChild, 
+				_globalTransformForChild->scaleX * parentGlobalTransform.scaleX >= 0, 
+				_globalTransformForChild->scaleY * parentGlobalTransform.scaleY >= 0 );
+		}
+	}
+			
+
 }
 
 void Bone::updateColor(
@@ -365,8 +398,8 @@ void Bone::blendingTimeline()
         _tween.y = transform.y * weight;
         _tween.skewX = transform.skewX * weight;
         _tween.skewY = transform.skewY * weight;
-        _tween.scaleX = transform.scaleX * weight;
-        _tween.scaleY = transform.scaleY * weight;
+        _tween.scaleX = 1 + (transform.scaleX - 1) * weight;
+        _tween.scaleY = 1 + (transform.scaleY - 1) * weight;
         _tweenPivot.x = pivot.x * weight;
         _tweenPivot.y = pivot.y * weight;
     }
@@ -380,8 +413,8 @@ void Bone::blendingTimeline()
         float y = 0.f;
         float skewX = 0.f;
         float skewY = 0.f;
-        float scaleX = 0.f;
-        float scaleY = 0.f;
+        float scaleX = 1.f;
+        float scaleY = 1.f;
         float pivotX = 0.f;
         float pivotY = 0.f;
         
@@ -416,8 +449,8 @@ void Bone::blendingTimeline()
                 y += transform.y * weight;
                 skewX += transform.skewX * weight;
                 skewY += transform.skewY * weight;
-                scaleX += transform.scaleX * weight;
-                scaleY += transform.scaleY * weight;
+                scaleX += (transform.scaleX - 1) * weight;
+                scaleY += (transform.scaleY - 1) * weight;
                 pivotX += pivot.x * weight;
                 pivotY += pivot.y * weight;
                 layerTotalWeight += weight;

@@ -14,6 +14,7 @@ class Object
 public:
     bool inheritRotation;
     bool inheritScale;
+	bool inheritTranslation;
     
     std::string name;
     Transform global;
@@ -23,6 +24,9 @@ public:
     
     void *userData;
     
+	static Matrix _tempParentGlobalTransformMatrix;
+	static Transform _tempParentGlobalTransform;
+
 protected:
     bool _visible;
     
@@ -40,6 +44,11 @@ protected:
     virtual void setArmature(Armature *armature);
     virtual void setParent(Bone *bone);
     
+	virtual void calculateRelativeParentTransform();
+
+	virtual bool calculateParentTransform(Transform &parentGlobalTransform, Matrix &parentGlobalTransformMatrix);
+	virtual bool updateGlobal(Transform &parentGlobalTransform, Matrix &parentGlobalTransformMatrix);
+
 public:
     Object();
     virtual ~Object();

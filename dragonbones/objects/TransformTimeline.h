@@ -22,6 +22,9 @@ public:
     {
         offset = 0.f;
         transformed = false;
+		
+		originTransform.scaleX = 1;
+		originTransform.scaleY = 1;
     }
     TransformTimeline(const TransformTimeline &copyData)
     {

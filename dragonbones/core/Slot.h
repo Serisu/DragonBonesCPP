@@ -72,6 +72,7 @@ protected:
 
     virtual void updateDisplayColor(int aOffset, int rOffset, int gOffset, int bOffset, float aMultiplier, float rMultiplier, float gMultiplier, float bMultiplier);
 
+    virtual void calculateRelativeParentTransform();
     virtual void updateChildArmatureAnimation();
     virtual void playChildArmatureAnimation();
     virtual void stopChildArmatureAnimation();

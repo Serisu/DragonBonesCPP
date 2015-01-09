@@ -25,9 +25,21 @@ class Bone : public Object
 private:
     static bool sortState(const TimelineState *a, const TimelineState *b);
     
+private:
+	Transform *_tempGlobalTransformForChild;
+	Matrix *_tempGlobalTransformMatrixForChild;
+
+
+public:
+	Transform *_globalTransformForChild;
+	Matrix *_globalTransformMatrixForChild;
+
 public:
     std::string displayController;
-    
+    bool applyOffsetTranslationToChild;
+	bool applyOffsetRotationToChild;
+	bool applyOffsetScaleToChild;
+
 protected:
     bool _isColorChanged;
     int _needUpdate;
@@ -38,6 +50,7 @@ protected:
     std::vector<Slot*> _slotList;
     std::vector<TimelineState*> _timelineStateList;
     
+
 public:
     virtual Slot* getSlot() const;
     virtual const std::vector<Slot*>& getSlots() const;
@@ -45,8 +58,8 @@ public:
     
     virtual void setVisible(bool vislble) override;
     
-    
-    
+		
+
 protected:
     virtual void setArmature(Armature *armature) override;
     
@@ -61,6 +74,7 @@ public:
     virtual void removeChild(Object *object);
     
 protected:
+	virtual void calculateRelativeParentTransform();
     virtual void update(bool needUpdate);
     virtual void updateColor(
         int aOffset,

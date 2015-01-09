@@ -26,12 +26,25 @@ void BaseDataParser::transformArmatureDataAnimations(ArmatureData *armatureData)
 {
     for (size_t i = 0, l = armatureData->animationDataList.size(); i < l; ++i)
     {
-        transformAnimationData(armatureData->animationDataList[i], armatureData);
+        transformAnimationData(armatureData->animationDataList[i], armatureData, false);
     }
 }
 
-void BaseDataParser::transformAnimationData(AnimationData *animationData, const ArmatureData *armatureData)
+void BaseDataParser::transformRelativeAnimationData(AnimationData *animationData, const ArmatureData *armatureData)
 {
+		
+
+}
+
+void BaseDataParser::transformAnimationData(AnimationData *animationData, const ArmatureData *armatureData, bool isGlobalData)
+{
+			if(!isGlobalData)
+			{
+				transformRelativeAnimationData(animationData, armatureData);
+				return;
+			}
+			
+
     SkinData *skinData = armatureData->getSkinData("");
     
     for (size_t i = 0, l = armatureData->boneDataList.size(); i < l; ++i)
@@ -71,8 +84,8 @@ void BaseDataParser::transformAnimationData(AnimationData *animationData, const 
             frame->transform.y -= boneData->transform.y;
             frame->transform.skewX -= boneData->transform.skewX;
             frame->transform.skewY -= boneData->transform.skewY;
-            frame->transform.scaleX -= boneData->transform.scaleX;
-            frame->transform.scaleY -= boneData->transform.scaleY;
+            frame->transform.scaleX /= boneData->transform.scaleX;
+            frame->transform.scaleY /= boneData->transform.scaleY;
             
             if (!timeline->transformed && slotData)
             {
@@ -95,8 +108,8 @@ void BaseDataParser::transformAnimationData(AnimationData *animationData, const 
             frame->transform.y -= originTransform->y;
             frame->transform.skewX = formatRadian(frame->transform.skewX - originTransform->skewX);
             frame->transform.skewY = formatRadian(frame->transform.skewY - originTransform->skewY);
-            frame->transform.scaleX -= originTransform->scaleX;
-            frame->transform.scaleY -= originTransform->scaleY;
+            frame->transform.scaleX /= originTransform->scaleX;
+            frame->transform.scaleY /= originTransform->scaleY;
             
             if (!timeline->transformed)
             {
@@ -203,9 +216,11 @@ void BaseDataParser::setFrameTransform(AnimationData *animationData, const Armat
                 }
             }
             
-            Matrix helpMatrix;
+            //Matrix helpMatrix;
             Transform currentTransform;
+            Matrix globalTransformMatrix;
             Transform *globalTransform = nullptr;
+            Matrix currentTransformMatrix;
             
             for (size_t i = parentTimelineList.size(); i--;)
             {
@@ -213,35 +228,30 @@ void BaseDataParser::setFrameTransform(AnimationData *animationData, const Armat
                 parentData = parentDataList[i];
                 getTimelineTransform(parentTimeline, frame->position, &currentTransform, !globalTransform);
                 
-                if (globalTransform)
-                {
-                    //if(inheritRotation)
-                    //{
-                    globalTransform->skewX += currentTransform.skewX + parentTimeline->originTransform.skewX + parentData->transform.skewX;
-                    globalTransform->skewY += currentTransform.skewY + parentTimeline->originTransform.skewY + parentData->transform.skewY;
-                    //}
-                    //if(inheritScale)
-                    //{
-                    //  globalTransform.scaleX *= currentTransform.scaleX + parentTimeline.originTransform.scaleX;
-                    //  globalTransform.scaleY *= currentTransform.scaleY + parentTimeline.originTransform.scaleY;
-                    //}
-                    //else
-                    //{
-                    globalTransform->scaleX = currentTransform.scaleX + parentTimeline->originTransform.scaleX + parentData->transform.scaleX;
-                    globalTransform->scaleY = currentTransform.scaleY + parentTimeline->originTransform.scaleY + parentData->transform.scaleY;
-                    //}
-                    const float x = currentTransform.x + parentTimeline->originTransform.x + parentData->transform.x;
-                    const float y = currentTransform.y + parentTimeline->originTransform.y + parentData->transform.y;
-                    globalTransform->x = helpMatrix.a * x + helpMatrix.c * y + helpMatrix.tx;
-                    globalTransform->y = helpMatrix.d * y + helpMatrix.b * x + helpMatrix.ty;
-                }
-                else
+                if (!globalTransform)
                 {
                     globalTransform = new Transform();
                     *globalTransform = currentTransform;
+
+                }
+                else
+                {
+					currentTransform.x += parentTimeline->originTransform.x + parentData->transform.x;
+					currentTransform.y += parentTimeline->originTransform.y + parentData->transform.y;
+							
+					currentTransform.skewX += parentTimeline->originTransform.skewX + parentData->transform.skewX;
+					currentTransform.skewY += parentTimeline->originTransform.skewY + parentData->transform.skewY;
+							
+					currentTransform.scaleX *= parentTimeline->originTransform.scaleX * parentData->transform.scaleX;
+					currentTransform.scaleY *= parentTimeline->originTransform.scaleY * parentData->transform.scaleY;
+							
+					currentTransform.toMatrix(currentTransformMatrix, true);
+
+					currentTransformMatrix.concat(globalTransformMatrix);
+					currentTransformMatrix.toTransform(globalTransform, currentTransform.scaleX * globalTransform.scaleX >= 0, currentTransform.scaleY * globalTransform.scaleY >= 0);
                 }
                 
-                globalTransform->toMatrix(helpMatrix, true);
+				globalTransform->toMatrix(globalTransformMatrix, true);
             }
             
             frame->transform.transformWith(*globalTransform);

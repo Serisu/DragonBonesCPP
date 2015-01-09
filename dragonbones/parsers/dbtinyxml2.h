@@ -1248,9 +1248,9 @@ public:
         returned if there is an error. For a method with error
         checking, see QueryIntAttribute()
     */
-    int         IntAttribute(const char *name) const
+	int         IntAttribute(const char *name, int defaultValue = 0) const
     {
-        int i = 0;
+		int i = defaultValue;
         QueryIntAttribute(name, &i);
         return i;
     }
@@ -1276,9 +1276,9 @@ public:
         return d;
     }
     /// See IntAttribute()
-    float     FloatAttribute(const char *name) const
+	float     FloatAttribute(const char *name, float defaultValue = 0.0f) const
     {
-        float f = 0;
+		float f = defaultValue;
         QueryFloatAttribute(name, &f);
         return f;
     }
