@@ -70,22 +70,40 @@ DragonBonesData* DBCCFactory::loadDragonBonesData(const std::string &dragonBones
         return existDragonBonesData;
     }
 
-    const auto &data = cocos2d::FileUtils::getInstance()->getDataFromFile(dragonBonesFilePath);
-    if (data.getSize() == 0)
-    {
-        return nullptr;
-    }
-
     // armature scale
     float scale = cocos2d::Director::getInstance()->getContentScaleFactor();
+    DragonBonesData *dragonBonesData;
+    
+    size_t size = dragonBonesFilePath.rfind(".json");
+    if (size != std::string::npos)
+    {
 
-    // load skeleton.xml using XML parser.
-    XMLDocument doc;
-    doc.Parse(reinterpret_cast<char*>(data.getBytes()), data.getSize());
-    // paser dragonbones skeleton data.
-    XMLDataParser parser;
-    DragonBonesData *dragonBonesData = parser.parseDragonBonesData(doc.RootElement(), scale);
+        const auto &data = cocos2d::FileUtils::getInstance()->getStringFromFile(dragonBonesFilePath);
+
+        rapidjson::Document doc;
+        doc.Parse<0>(data.c_str());
+
+        JSONDataParser parser;
+        dragonBonesData = parser.parseDragonBonesData(&doc, scale);
+    }
+    else
+    {
+        const auto &data = cocos2d::FileUtils::getInstance()->getDataFromFile(dragonBonesFilePath);
+        if (data.getSize() == 0)
+        {
+            return nullptr;
+        }
+        
+        // load skeleton.xml using XML parser.
+        XMLDocument doc;
+        doc.Parse(reinterpret_cast<char*>(data.getBytes()), data.getSize());
+        // paser dragonbones skeleton data.
+        XMLDataParser parser;
+        dragonBonesData = parser.parseDragonBonesData(doc.RootElement(), scale);
+    }
+
     addDragonBonesData(dragonBonesData, name);
+
     return dragonBonesData;
 }
 
@@ -99,20 +117,35 @@ ITextureAtlas* DBCCFactory::loadTextureAtlas(const std::string &textureAtlasFile
         return existTextureAtlas;
     }
 
-    const auto &data = cocos2d::FileUtils::getInstance()->getDataFromFile(textureAtlasFile);
-    if (data.getSize() == 0)
-    {
-        return nullptr;
-    }
-
     // textureAtlas scale
     float scale = cocos2d::Director::getInstance()->getContentScaleFactor();
-
-    XMLDocument doc;
-    doc.Parse(reinterpret_cast<char*>(data.getBytes()), data.getSize());
-    XMLDataParser parser;
     DBCCTextureAtlas *textureAtlas = new DBCCTextureAtlas();
-    textureAtlas->textureAtlasData = parser.parseTextureAtlasData(doc.RootElement(), scale);
+    
+    size_t size = textureAtlasFile.rfind(".json");
+    if (size != std::string::npos)
+    {
+        const auto &data = cocos2d::FileUtils::getInstance()->getStringFromFile(textureAtlasFile);
+        
+        rapidjson::Document doc;
+        doc.Parse<0>(data.c_str());
+        
+        JSONDataParser parser;
+        textureAtlas->textureAtlasData = parser.parseTextureAtlasData(&doc, scale);
+    }
+    else
+    {
+        const auto &data = cocos2d::FileUtils::getInstance()->getDataFromFile(textureAtlasFile);
+        if (data.getSize() == 0)
+        {
+            return nullptr;
+        }
+        
+        XMLDocument doc;
+        doc.Parse(reinterpret_cast<char*>(data.getBytes()), data.getSize());
+        
+        XMLDataParser parser;
+        textureAtlas->textureAtlasData = parser.parseTextureAtlasData(doc.RootElement(), scale);
+    }
 
     int pos = textureAtlasFile.find_last_of("/");
 

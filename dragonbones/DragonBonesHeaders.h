@@ -51,6 +51,7 @@
 // parsers
 #include "parsers/BaseDataParser.h"
 #include "parsers/XMLDataParser.h"
+#include "parsers/JSONDataParser.h"
 
 // factories
 #include "factories/BaseFactory.h"
